@@ -1,0 +1,38 @@
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Build output
+/bin/
+/build/
+/dist/
+
+# Vendor (if not committing)
+ /vendor/
+
+# Env / Secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+
+# Docker
+docker-compose.override.yml
+
+# Coverage / Test
+coverage.out
+coverage.html
