@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/anvndev/order-service/internal/cache"
-	"github.com/anvndev/order-service/internal/handler"
-	"github.com/anvndev/order-service/internal/mq"
-	"github.com/anvndev/order-service/internal/repository"
-	"github.com/anvndev/order-service/internal/service"
+	"github.com/andev0x/order-service/internal/cache"
+	"github.com/andev0x/order-service/internal/handler"
+	"github.com/andev0x/order-service/internal/mq"
+	"github.com/andev0x/order-service/internal/repository"
+	"github.com/andev0x/order-service/internal/service"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

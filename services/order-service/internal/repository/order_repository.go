@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anvndev/order-service/internal/model"
+	"github.com/andev0x/order-service/internal/model"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -44,7 +44,6 @@ func (r *MySQLOrderRepository) Create(ctx context.Context, order *model.Order) e
 		order.CreatedAt,
 		order.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create order: %w", err)
 	}

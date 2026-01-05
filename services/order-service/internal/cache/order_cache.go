@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/anvndev/order-service/internal/model"
+	"github.com/andev0x/order-service/internal/model"
 	"github.com/redis/go-redis/v9"
 )
 

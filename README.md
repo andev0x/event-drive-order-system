@@ -202,5 +202,6 @@ Services exposed:
 
 ## 📌 Author
 [anvndev](github.com/andev0x)
+[License](LICENSE)
 > Built as a backend-focused side project to demonstrate **Golang microservices, event-driven architecture, and production-ready thinking**.
 

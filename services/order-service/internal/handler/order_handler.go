@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/anvndev/order-service/internal/model"
-	"github.com/anvndev/order-service/internal/service"
+	"github.com/andev0x/order-service/internal/model"
+	"github.com/andev0x/order-service/internal/service"
 	"github.com/gorilla/mux"
 )
 

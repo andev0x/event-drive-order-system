@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/anvndev/order-service/internal/model"
+	"github.com/andev0x/order-service/internal/model"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -88,7 +88,6 @@ func (p *RabbitMQPublisher) PublishOrderCreated(ctx context.Context, event *mode
 			Timestamp:    time.Now(),
 		},
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
