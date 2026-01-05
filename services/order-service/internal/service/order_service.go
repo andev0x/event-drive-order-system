@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/anvndev/order-service/internal/cache"
-	"github.com/anvndev/order-service/internal/model"
-	"github.com/anvndev/order-service/internal/mq"
-	"github.com/anvndev/order-service/internal/repository"
+	"github.com/andev0x/order-service/internal/cache"
+	"github.com/andev0x/order-service/internal/model"
+	"github.com/andev0x/order-service/internal/mq"
+	"github.com/andev0x/order-service/internal/repository"
 	"github.com/google/uuid"
 )
 
