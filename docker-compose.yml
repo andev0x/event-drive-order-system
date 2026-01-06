@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   # MySQL for Order Service
   order-db:
     image: mysql:8.0
     container_name: order-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: order_db
       MYSQL_USER: orderuser
       MYSQL_PASSWORD: orderpass
@@ -25,7 +23,7 @@ services:
     image: mysql:8.0
     container_name: analytics-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: analytics_db
       MYSQL_USER: analyticsuser
       MYSQL_PASSWORD: analyticspass
@@ -59,8 +57,8 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -121,7 +119,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Notification Worker (Optional)
+  # Notification Worker
   notification-worker:
     build:
       context: ./services/notification-worker
