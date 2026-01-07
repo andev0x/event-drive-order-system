@@ -10,6 +10,7 @@
 /bin/
 /build/
 /dist/
+/services/*/main
 
 # Vendor (if not committing)
  /vendor/

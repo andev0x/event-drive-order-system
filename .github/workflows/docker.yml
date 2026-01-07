@@ -58,10 +58,13 @@ jobs:
       - name: Check service health
         run: |
           echo "Checking Order Service..."
-          curl -f http://localhost:8080/health || echo "Health check not implemented"
+          curl -f http://localhost:8080/health -v
           
           echo "Checking Analytics Service..."
-          curl -f http://localhost:8081/health || echo "Health check not implemented"
+          curl -f http://localhost:8081/health -v
+          
+          echo "Checking Notification Worker..."
+          curl -f http://localhost:8082/health -v
 
       - name: Show logs
         if: always()

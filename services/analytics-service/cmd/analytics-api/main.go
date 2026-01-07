@@ -60,6 +60,24 @@ func main() {
 	defer consumer.Close()
 	log.Println("RabbitMQ connected successfully")
 
+	// Setup health checker
+	healthChecker := &handler.HealthChecker{
+		DBHealthFunc: func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			return db.PingContext(ctx)
+		},
+		CacheHealthFunc: func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			return redisClient.Ping(ctx).Err()
+		},
+		MQHealthFunc: func() error {
+			return consumer.HealthCheck()
+		},
+	}
+	analyticsHandler.SetHealthChecker(healthChecker)
+
 	// Start consuming events
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
