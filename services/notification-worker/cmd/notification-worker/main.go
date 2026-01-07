@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,6 +38,7 @@ func main() {
 
 	// Get RabbitMQ URL from environment
 	rabbitMQURL := getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	healthPort := getEnv("HEALTH_PORT", "8082")
 
 	// Connect to RabbitMQ
 	conn, err := connectRabbitMQ(rabbitMQURL)
@@ -44,6 +46,18 @@ func main() {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
+
+	// Start health check HTTP server
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		healthCheck(w, r, conn)
+	})
+
+	go func() {
+		log.Printf("Health check server listening on port %s", healthPort)
+		if err := http.ListenAndServe(":"+healthPort, nil); err != nil {
+			log.Printf("Health check server error: %v", err)
+		}
+	}()
 
 	// Create channel
 	channel, err := conn.Channel()
@@ -215,4 +229,37 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// healthCheck handles the health check endpoint
+func healthCheck(w http.ResponseWriter, r *http.Request, conn *amqp.Connection) {
+	response := map[string]interface{}{
+		"status":  "healthy",
+		"service": "notification-worker",
+	}
+
+	checks := map[string]string{
+		"mq": "healthy",
+	}
+
+	overallHealthy := true
+
+	// Check RabbitMQ connection
+	if conn == nil || conn.IsClosed() {
+		checks["mq"] = "unhealthy: connection closed"
+		overallHealthy = false
+	}
+
+	response["checks"] = checks
+	if !overallHealthy {
+		response["status"] = "degraded"
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }

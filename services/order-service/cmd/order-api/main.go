@@ -59,6 +59,24 @@ func main() {
 	// Create handler
 	orderHandler := handler.NewOrderHandler(orderService)
 
+	// Setup health checker
+	healthChecker := &handler.HealthChecker{
+		DBHealthFunc: func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			return db.PingContext(ctx)
+		},
+		CacheHealthFunc: func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			return redisClient.Ping(ctx).Err()
+		},
+		MQHealthFunc: func() error {
+			return publisher.HealthCheck()
+		},
+	}
+	orderHandler.SetHealthChecker(healthChecker)
+
 	// Setup router
 	router := mux.NewRouter()
 

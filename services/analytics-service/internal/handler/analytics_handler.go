@@ -10,12 +10,28 @@ import (
 
 // AnalyticsHandler handles HTTP requests for analytics
 type AnalyticsHandler struct {
-	service *service.AnalyticsService
+	service     *service.AnalyticsService
+	healthCheck *HealthChecker
+}
+
+// HealthChecker provides health check functionality
+type HealthChecker struct {
+	DBHealthFunc    func() error
+	CacheHealthFunc func() error
+	MQHealthFunc    func() error
 }
 
 // NewAnalyticsHandler creates a new analytics handler
 func NewAnalyticsHandler(service *service.AnalyticsService) *AnalyticsHandler {
-	return &AnalyticsHandler{service: service}
+	return &AnalyticsHandler{
+		service:     service,
+		healthCheck: nil, // Set via SetHealthChecker
+	}
+}
+
+// SetHealthChecker sets the health checker
+func (h *AnalyticsHandler) SetHealthChecker(hc *HealthChecker) {
+	h.healthCheck = hc
 }
 
 // GetSummary handles GET /analytics/summary
@@ -32,7 +48,54 @@ func (h *AnalyticsHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 // HealthCheck handles GET /health
 func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	respondWithJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+	response := map[string]interface{}{
+		"status":  "healthy",
+		"service": "analytics-service",
+	}
+
+	// Check dependencies if health checker is configured
+	if h.healthCheck != nil {
+		checks := map[string]string{
+			"database": "healthy",
+			"cache":    "healthy",
+			"mq":       "healthy",
+		}
+
+		overallHealthy := true
+
+		// Check database
+		if h.healthCheck.DBHealthFunc != nil {
+			if err := h.healthCheck.DBHealthFunc(); err != nil {
+				checks["database"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		// Check cache
+		if h.healthCheck.CacheHealthFunc != nil {
+			if err := h.healthCheck.CacheHealthFunc(); err != nil {
+				checks["cache"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		// Check message queue
+		if h.healthCheck.MQHealthFunc != nil {
+			if err := h.healthCheck.MQHealthFunc(); err != nil {
+				checks["mq"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		response["checks"] = checks
+		if !overallHealthy {
+			response["status"] = "degraded"
+			respondWithJSON(w, http.StatusServiceUnavailable, response)
+			return
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
 }
 
 // respondWithError sends an error response

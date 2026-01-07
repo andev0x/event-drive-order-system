@@ -110,3 +110,17 @@ func (p *RabbitMQPublisher) Close() error {
 	}
 	return nil
 }
+
+// HealthCheck checks if the RabbitMQ connection is alive
+func (p *RabbitMQPublisher) HealthCheck() error {
+	if p.conn == nil {
+		return fmt.Errorf("connection is nil")
+	}
+	if p.conn.IsClosed() {
+		return fmt.Errorf("connection is closed")
+	}
+	if p.channel == nil {
+		return fmt.Errorf("channel is nil")
+	}
+	return nil
+}

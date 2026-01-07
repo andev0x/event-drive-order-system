@@ -1,0 +1,157 @@
+# GolangCI-Lint configuration
+# Compatible with golangci-lint OSS v2.x
+# Maintained by anvndev
+
+run:
+  # Maximum time allowed for the entire lint run
+  timeout: 5m
+
+  # Run linters on test files as well
+  tests: true
+
+  # Do not allow downloading missing modules during linting
+  modules-download-mode: readonly
+
+output:
+  # Output format: colored, line-number, json, tab, checkstyle, etc.
+  format: colored
+
+  # Print the line of code that caused the issue
+  print-issued-lines: true
+
+  # Print the linter name that reported the issue
+  print-linter-name: true
+
+linters-settings:
+  errcheck:
+    # Report unchecked type assertions
+    check-type-assertions: true
+    # Report assignments to the blank identifier
+    check-blank: true
+
+  govet:
+    # Enable all vet analyzers
+    enable-all: true
+    # Disable shadowing check (often noisy in real projects)
+    disable:
+      - shadow
+
+  gocyclo:
+    # Maximum allowed cyclomatic complexity
+    min-complexity: 15
+
+  dupl:
+    # Minimum token count to trigger duplicate code detection
+    threshold: 100
+
+  goconst:
+    # Minimum string length to consider for constants
+    min-len: 3
+    # Minimum number of occurrences before suggesting a constant
+    min-occurrences: 3
+
+  misspell:
+    # Use US English dictionary
+    locale: US
+
+  lll:
+    # Maximum line length
+    line-length: 120
+    # Tab width for line length calculation
+    tab-width: 1
+
+  unparam:
+    # Do not report unused exported function parameters
+    check-exported: false
+
+  nakedret:
+    # Maximum number of lines in a function to allow naked returns
+    max-func-lines: 30
+
+  prealloc:
+    # Suggest slice preallocation for simple cases
+    simple: true
+    # Suggest slice preallocation for range loops
+    range-loops: true
+    # Do not suggest for classic for-loops
+    for-loops: false
+
+  gocritic:
+    # Enable selected groups of checks
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    # Disable specific checks that are too noisy or not useful here
+    disabled-checks:
+      - whyNoLint
+      - unnamedResult
+
+  funlen:
+    # Maximum number of lines per function
+    lines: 100
+    # Maximum number of statements per function
+    statements: 50
+
+  goimports:
+    # Local import path prefix for grouping
+    local-prefixes: github.com/andev0x
+
+linters:
+  # Disable all linters by default
+  disable-all: true
+
+  # Enable only the selected linters below
+  enable:
+    - errcheck      # Check for unchecked errors
+    - govet         # Go vet static analysis
+    - staticcheck   # Advanced static analysis
+    - gocyclo       # Cyclomatic complexity checks
+    - gofmt         # Go formatting check
+    - goimports     # Import formatting and grouping
+    - misspell      # Spelling mistakes
+    - unconvert     # Unnecessary type conversions
+    - dupl          # Duplicate code detection
+    - goconst       # Repeated strings/constants detection
+    - gosec         # Security issues
+    - prealloc      # Slice preallocation suggestions
+    - revive        # Fast, configurable linter
+    - gocritic      # Meta-linter with many checks
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+
+    # Exclude known noisy checks in migration files
+    - path: migrations/
+      linters:
+        - errcheck
+        - gosec
+
+  # Maximum number of issues reported per linter
+  max-issues-per-linter: 50
+
+  # Maximum number of repeated issues
+  max-same-issues: 3
+
+  # Do not limit to only new issues
+  new: false
+
+severity:
+  # Default severity level
+  default-severity: error
+
+  # Override severity for specific linters
+  rules:
+    - linters:
+        - dupl
+      severity: info

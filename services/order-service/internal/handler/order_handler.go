@@ -13,12 +13,28 @@ import (
 
 // OrderHandler handles HTTP requests for orders
 type OrderHandler struct {
-	service *service.OrderService
+	service     *service.OrderService
+	healthCheck *HealthChecker
+}
+
+// HealthChecker provides health check functionality
+type HealthChecker struct {
+	DBHealthFunc    func() error
+	CacheHealthFunc func() error
+	MQHealthFunc    func() error
 }
 
 // NewOrderHandler creates a new order handler
 func NewOrderHandler(service *service.OrderService) *OrderHandler {
-	return &OrderHandler{service: service}
+	return &OrderHandler{
+		service:     service,
+		healthCheck: nil, // Set via SetHealthChecker
+	}
+}
+
+// SetHealthChecker sets the health checker
+func (h *OrderHandler) SetHealthChecker(hc *HealthChecker) {
+	h.healthCheck = hc
 }
 
 // CreateOrder handles POST /orders
@@ -91,7 +107,54 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 
 // HealthCheck handles GET /health
 func (h *OrderHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	respondWithJSON(w, http.StatusOK, map[string]string{"status": "healthy"})
+	response := map[string]interface{}{
+		"status":  "healthy",
+		"service": "order-service",
+	}
+
+	// Check dependencies if health checker is configured
+	if h.healthCheck != nil {
+		checks := map[string]string{
+			"database": "healthy",
+			"cache":    "healthy",
+			"mq":       "healthy",
+		}
+
+		overallHealthy := true
+
+		// Check database
+		if h.healthCheck.DBHealthFunc != nil {
+			if err := h.healthCheck.DBHealthFunc(); err != nil {
+				checks["database"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		// Check cache
+		if h.healthCheck.CacheHealthFunc != nil {
+			if err := h.healthCheck.CacheHealthFunc(); err != nil {
+				checks["cache"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		// Check message queue
+		if h.healthCheck.MQHealthFunc != nil {
+			if err := h.healthCheck.MQHealthFunc(); err != nil {
+				checks["mq"] = "unhealthy: " + err.Error()
+				overallHealthy = false
+			}
+		}
+
+		response["checks"] = checks
+		if !overallHealthy {
+			response["status"] = "degraded"
+			respondWithJSON(w, http.StatusServiceUnavailable, response)
+			return
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
 }
 
 // respondWithError sends an error response
