@@ -1,3 +1,4 @@
+// Package main provides the entry point for the analytics service API server.
 package main
 
 import (
@@ -17,6 +18,7 @@ import (
 	"github.com/andev0x/analytics-service/internal/service"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -31,16 +33,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
 	log.Println("Database connected successfully")
 
 	// Initialize Redis
 	log.Println("Connecting to Redis...")
-	redisClient, err := cache.InitRedis(config.RedisHost, config.RedisPort)
-	if err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
-	}
-	defer redisClient.Close()
+	redisClient := initRedisOrFatal(config)
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Error closing Redis: %v", err)
+		}
+	}()
 	log.Println("Redis connected successfully")
 
 	// Create repository, cache, and service
@@ -53,11 +60,12 @@ func main() {
 
 	// Initialize RabbitMQ consumer
 	log.Println("Connecting to RabbitMQ...")
-	consumer, err := mq.NewRabbitMQConsumer(config.RabbitMQURL)
-	if err != nil {
-		log.Fatalf("Failed to initialize RabbitMQ consumer: %v", err)
-	}
-	defer consumer.Close()
+	consumer := initRabbitMQOrFatal(config)
+	defer func() {
+		if err := consumer.Close(); err != nil {
+			log.Printf("Error closing consumer: %v", err)
+		}
+	}()
 	log.Println("RabbitMQ connected successfully")
 
 	// Setup health checker
@@ -77,17 +85,6 @@ func main() {
 		},
 	}
 	analyticsHandler.SetHealthChecker(healthChecker)
-
-	// Start consuming events
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	err = consumer.StartConsuming(ctx, func(event *model.OrderCreatedEvent) error {
-		return analyticsService.ProcessOrderEvent(context.Background(), event)
-	})
-	if err != nil {
-		log.Fatalf("Failed to start consuming: %v", err)
-	}
 
 	// Setup router
 	router := mux.NewRouter()
@@ -110,6 +107,11 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Start consuming events
+	ctx, cancel := context.WithCancel(context.Background())
+
+	startConsumingOrFatal(ctx, consumer, analyticsService)
+
 	// Start server in a goroutine
 	go func() {
 		log.Printf("Analytics Service listening on port %s", config.ServicePort)
@@ -130,7 +132,7 @@ func main() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
 	}
 
 	log.Println("Server exited gracefully")
@@ -170,4 +172,31 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// initRedisOrFatal initializes Redis or exits with fatal error
+func initRedisOrFatal(config Config) *redis.Client {
+	redisClient, err := cache.InitRedis(config.RedisHost, config.RedisPort)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	return redisClient
+}
+
+// initRabbitMQOrFatal initializes RabbitMQ consumer or exits with fatal error
+func initRabbitMQOrFatal(config Config) *mq.RabbitMQConsumer {
+	consumer, err := mq.NewRabbitMQConsumer(config.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize RabbitMQ consumer: %v", err)
+	}
+	return consumer
+}
+
+// startConsumingOrFatal starts consuming events or exits with fatal error
+func startConsumingOrFatal(ctx context.Context, consumer *mq.RabbitMQConsumer, svc *service.AnalyticsService) {
+	if err := consumer.StartConsuming(ctx, func(event *model.OrderCreatedEvent) error {
+		return svc.ProcessOrderEvent(context.Background(), event)
+	}); err != nil {
+		log.Fatalf("Failed to start consuming: %v", err)
+	}
 }

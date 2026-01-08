@@ -1,3 +1,4 @@
+// Package cache provides caching implementations for analytics data.
 package cache
 
 import (
