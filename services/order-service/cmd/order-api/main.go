@@ -1,3 +1,4 @@
+// Package main provides the entry point for the order service API.
 package main
 
 import (
@@ -30,25 +31,39 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Error closing database connection: %v", err)
+		}
+	}()
 	log.Println("Database connected successfully")
 
 	// Initialize Redis
 	log.Println("Connecting to Redis...")
 	redisClient, err := cache.InitRedis(config.RedisHost, config.RedisPort)
 	if err != nil {
-		log.Fatalf("Failed to initialize Redis: %v", err)
+		log.Printf("Failed to initialize Redis: %v", err)
+		return
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Error closing Redis connection: %v", err)
+		}
+	}()
 	log.Println("Redis connected successfully")
 
 	// Initialize RabbitMQ publisher
 	log.Println("Connecting to RabbitMQ...")
 	publisher, err := mq.NewRabbitMQPublisher(config.RabbitMQURL)
 	if err != nil {
-		log.Fatalf("Failed to initialize RabbitMQ publisher: %v", err)
+		log.Printf("Failed to initialize RabbitMQ publisher: %v", err)
+		return
 	}
-	defer publisher.Close()
+	defer func() {
+		if err := publisher.Close(); err != nil {
+			log.Printf("Error closing RabbitMQ publisher: %v", err)
+		}
+	}()
 	log.Println("RabbitMQ connected successfully")
 
 	// Create repository, cache, and service
@@ -119,7 +134,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
 	}
 
 	log.Println("Server exited gracefully")

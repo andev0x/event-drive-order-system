@@ -1,3 +1,4 @@
+// Package mq provides message queue implementations for event publishing.
 package mq
 
 import (
@@ -38,7 +39,9 @@ func NewRabbitMQPublisher(url string) (*RabbitMQPublisher, error) {
 
 	channel, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
@@ -53,8 +56,12 @@ func NewRabbitMQPublisher(url string) (*RabbitMQPublisher, error) {
 		nil,          // arguments
 	)
 	if err != nil {
-		channel.Close()
-		conn.Close()
+		if closeErr := channel.Close(); closeErr != nil {
+			log.Printf("Error closing channel: %v", closeErr)
+		}
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to declare exchange: %w", err)
 	}
 

@@ -1,3 +1,4 @@
+// Package cache provides caching implementations for the order service.
 package cache
 
 import (

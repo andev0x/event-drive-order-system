@@ -148,19 +148,19 @@ func TestCreateOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &MockOrderRepository{
-				CreateFunc: func(ctx context.Context, order *model.Order) error {
+				CreateFunc: func(_ context.Context, _ *model.Order) error {
 					return nil
 				},
 			}
 
 			mockCache := &MockOrderCache{
-				SetFunc: func(ctx context.Context, order *model.Order) error {
+				SetFunc: func(_ context.Context, _ *model.Order) error {
 					return nil
 				},
 			}
 
 			mockPublisher := &MockEventPublisher{
-				PublishOrderCreatedFunc: func(ctx context.Context, event *model.OrderCreatedEvent) error {
+				PublishOrderCreatedFunc: func(_ context.Context, _ *model.OrderCreatedEvent) error {
 					return nil
 				},
 			}
@@ -216,7 +216,7 @@ func TestGetOrderByID(t *testing.T) {
 	t.Run("cache hit", func(t *testing.T) {
 		mockRepo := &MockOrderRepository{}
 		mockCache := &MockOrderCache{
-			GetFunc: func(ctx context.Context, id string) (*model.Order, error) {
+			GetFunc: func(_ context.Context, _ string) (*model.Order, error) {
 				return testOrder, nil
 			},
 		}
@@ -235,15 +235,15 @@ func TestGetOrderByID(t *testing.T) {
 
 	t.Run("cache miss, db hit", func(t *testing.T) {
 		mockRepo := &MockOrderRepository{
-			GetByIDFunc: func(ctx context.Context, id string) (*model.Order, error) {
+			GetByIDFunc: func(_ context.Context, _ string) (*model.Order, error) {
 				return testOrder, nil
 			},
 		}
 		mockCache := &MockOrderCache{
-			GetFunc: func(ctx context.Context, id string) (*model.Order, error) {
+			GetFunc: func(_ context.Context, _ string) (*model.Order, error) {
 				return nil, errors.New("not found")
 			},
-			SetFunc: func(ctx context.Context, order *model.Order) error {
+			SetFunc: func(_ context.Context, _ *model.Order) error {
 				return nil
 			},
 		}

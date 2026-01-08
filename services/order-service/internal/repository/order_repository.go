@@ -1,12 +1,15 @@
+// Package repository provides data access implementations for the order service.
 package repository
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/andev0x/order-service/internal/model"
+	// MySQL driver for database/sql
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -95,7 +98,11 @@ func (r *MySQLOrderRepository) List(ctx context.Context, limit, offset int) ([]*
 	if err != nil {
 		return nil, fmt.Errorf("failed to list orders: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Error closing rows: %v", err)
+		}
+	}()
 
 	var orders []*model.Order
 	for rows.Next() {
