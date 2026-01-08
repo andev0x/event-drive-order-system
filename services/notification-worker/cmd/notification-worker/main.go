@@ -1,3 +1,5 @@
+// Package main implements the notification worker service that consumes order events from RabbitMQ
+// and sends notifications to customers.
 package main
 
 import (
@@ -45,16 +47,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("Error closing RabbitMQ connection: %v", err)
+		}
+	}()
 
 	// Start health check HTTP server
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		healthCheck(w, r, conn)
 	})
 
+	server := &http.Server{
+		Addr:         ":" + healthPort,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
 	go func() {
 		log.Printf("Health check server listening on port %s", healthPort)
-		if err := http.ListenAndServe(":"+healthPort, nil); err != nil {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("Health check server error: %v", err)
 		}
 	}()
@@ -62,9 +75,14 @@ func main() {
 	// Create channel
 	channel, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open channel: %v", err)
+		log.Printf("Failed to open channel: %v", err)
+		return
 	}
-	defer channel.Close()
+	defer func() {
+		if err := channel.Close(); err != nil {
+			log.Printf("Error closing RabbitMQ channel: %v", err)
+		}
+	}()
 
 	// Declare exchange
 	err = channel.ExchangeDeclare(
@@ -77,7 +95,8 @@ func main() {
 		nil,   // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare exchange: %v", err)
+		log.Printf("Failed to declare exchange: %v", err)
+		return
 	}
 
 	// Declare queue
@@ -90,7 +109,8 @@ func main() {
 		nil,   // arguments
 	)
 	if err != nil {
-		log.Fatalf("Failed to declare queue: %v", err)
+		log.Printf("Failed to declare queue: %v", err)
+		return
 	}
 
 	// Bind queue to exchange
@@ -102,7 +122,8 @@ func main() {
 		nil,
 	)
 	if err != nil {
-		log.Fatalf("Failed to bind queue: %v", err)
+		log.Printf("Failed to bind queue: %v", err)
+		return
 	}
 
 	log.Printf("Notification worker connected to queue '%s'", queueName)
@@ -114,7 +135,8 @@ func main() {
 		false, // global
 	)
 	if err != nil {
-		log.Fatalf("Failed to set QoS: %v", err)
+		log.Printf("Failed to set QoS: %v", err)
+		return
 	}
 
 	// Start consuming
@@ -128,7 +150,8 @@ func main() {
 		nil,   // args
 	)
 	if err != nil {
-		log.Fatalf("Failed to register consumer: %v", err)
+		log.Printf("Failed to register consumer: %v", err)
+		return
 	}
 
 	log.Println("Notification worker is now consuming order events...")
@@ -162,7 +185,9 @@ func main() {
 			var event OrderCreatedEvent
 			if err := json.Unmarshal(msg.Body, &event); err != nil {
 				log.Printf("Error unmarshaling event: %v", err)
-				msg.Nack(false, false) // Don't requeue invalid messages
+				if nackErr := msg.Nack(false, false); nackErr != nil {
+					log.Printf("Error nacking message: %v", nackErr)
+				}
 				continue
 			}
 
@@ -172,13 +197,18 @@ func main() {
 			// Process notification
 			if err := sendNotification(&event); err != nil {
 				log.Printf("Error sending notification: %v", err)
-				msg.Nack(false, true) // Requeue for retry
+				if nackErr := msg.Nack(false, true); nackErr != nil {
+					log.Printf("Error nacking message: %v", nackErr)
+				}
 				continue
 			}
 
 			// Acknowledge successful processing
-			msg.Ack(false)
-			log.Printf("Successfully sent notification for order: %s", event.OrderID)
+			if ackErr := msg.Ack(false); ackErr != nil {
+				log.Printf("Error acknowledging message: %v", ackErr)
+			} else {
+				log.Printf("Successfully sent notification for order: %s", event.OrderID)
+			}
 		}
 	}
 }
@@ -232,7 +262,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 // healthCheck handles the health check endpoint
-func healthCheck(w http.ResponseWriter, r *http.Request, conn *amqp.Connection) {
+func healthCheck(w http.ResponseWriter, _ *http.Request, conn *amqp.Connection) {
 	response := map[string]interface{}{
 		"status":  "healthy",
 		"service": "notification-worker",
@@ -255,11 +285,15 @@ func healthCheck(w http.ResponseWriter, r *http.Request, conn *amqp.Connection) 
 		response["status"] = "degraded"
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Error encoding health check response: %v", err)
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding health check response: %v", err)
+	}
 }
