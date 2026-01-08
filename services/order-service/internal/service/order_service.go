@@ -1,3 +1,4 @@
+// Package service provides business logic implementations for the order service.
 package service
 
 import (

@@ -1,3 +1,4 @@
+// Package handler provides HTTP request handlers for the order service.
 package handler
 
 import (
@@ -106,7 +107,7 @@ func (h *OrderHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 // HealthCheck handles GET /health
-func (h *OrderHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (h *OrderHandler) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	response := map[string]interface{}{
 		"status":  "healthy",
 		"service": "order-service",
@@ -167,11 +168,15 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, err := json.Marshal(payload)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		if _, writeErr := w.Write([]byte("Internal server error")); writeErr != nil {
+			log.Printf("Error writing error response: %v", writeErr)
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(response)
+	if _, err := w.Write(response); err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
 }
