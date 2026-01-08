@@ -1,7 +1,7 @@
 # GolangCI-Lint configuration
 # Compatible with golangci-lint OSS v2.x
 # Maintained by anvndev
-
+version: "2"
 run:
   # Maximum time allowed for the entire lint run
   timeout: 5m
@@ -109,8 +109,6 @@ linters:
     - govet         # Go vet static analysis
     - staticcheck   # Advanced static analysis
     - gocyclo       # Cyclomatic complexity checks
-    - gofmt         # Go formatting check
-    - goimports     # Import formatting and grouping
     - misspell      # Spelling mistakes
     - unconvert     # Unnecessary type conversions
     - dupl          # Duplicate code detection
@@ -145,13 +143,3 @@ issues:
 
   # Do not limit to only new issues
   new: false
-
-severity:
-  # Default severity level
-  default-severity: error
-
-  # Override severity for specific linters
-  rules:
-    - linters:
-        - dupl
-      severity: info
