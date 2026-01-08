@@ -1,3 +1,4 @@
+// Package mq provides message queue consumer implementations for event processing.
 package mq
 
 import (
@@ -38,7 +39,9 @@ func NewRabbitMQConsumer(url string) (*RabbitMQConsumer, error) {
 
 	channel, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to open channel: %w", err)
 	}
 
@@ -53,8 +56,12 @@ func NewRabbitMQConsumer(url string) (*RabbitMQConsumer, error) {
 		nil,          // arguments
 	)
 	if err != nil {
-		channel.Close()
-		conn.Close()
+		if closeErr := channel.Close(); closeErr != nil {
+			log.Printf("Error closing channel: %v", closeErr)
+		}
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to declare exchange: %w", err)
 	}
 
@@ -68,8 +75,12 @@ func NewRabbitMQConsumer(url string) (*RabbitMQConsumer, error) {
 		nil,       // arguments
 	)
 	if err != nil {
-		channel.Close()
-		conn.Close()
+		if closeErr := channel.Close(); closeErr != nil {
+			log.Printf("Error closing channel: %v", closeErr)
+		}
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to declare queue: %w", err)
 	}
 
@@ -82,8 +93,12 @@ func NewRabbitMQConsumer(url string) (*RabbitMQConsumer, error) {
 		nil,
 	)
 	if err != nil {
-		channel.Close()
-		conn.Close()
+		if closeErr := channel.Close(); closeErr != nil {
+			log.Printf("Error closing channel: %v", closeErr)
+		}
+		if closeErr := conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to bind queue: %w", err)
 	}
 
@@ -138,7 +153,9 @@ func (c *RabbitMQConsumer) StartConsuming(ctx context.Context, handler func(*mod
 				var event model.OrderCreatedEvent
 				if err := json.Unmarshal(msg.Body, &event); err != nil {
 					log.Printf("Error unmarshaling event: %v", err)
-					msg.Nack(false, false) // Don't requeue invalid messages
+					if nackErr := msg.Nack(false, false); nackErr != nil {
+						log.Printf("Error nacking message: %v", nackErr)
+					}
 					continue
 				}
 
@@ -149,12 +166,16 @@ func (c *RabbitMQConsumer) StartConsuming(ctx context.Context, handler func(*mod
 				if err := handler(&event); err != nil {
 					log.Printf("Error processing event: %v", err)
 					// Requeue the message for retry
-					msg.Nack(false, true)
+					if nackErr := msg.Nack(false, true); nackErr != nil {
+						log.Printf("Error nacking message: %v", nackErr)
+					}
 					continue
 				}
 
 				// Acknowledge successful processing
-				msg.Ack(false)
+				if ackErr := msg.Ack(false); ackErr != nil {
+					log.Printf("Error acking message: %v", ackErr)
+				}
 				log.Printf("Successfully processed event for order: %s", event.OrderID)
 			}
 		}

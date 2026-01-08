@@ -1,3 +1,4 @@
+// Package repository provides data persistence implementations for analytics.
 package repository
 
 import (
@@ -7,6 +8,7 @@ import (
 	"time"
 
 	"github.com/andev0x/analytics-service/internal/model"
+	// Import MySQL driver for database/sql
 	_ "github.com/go-sql-driver/mysql"
 )
 

@@ -1,3 +1,4 @@
+// Package service provides business logic for analytics operations.
 package service
 
 import (

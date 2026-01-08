@@ -1,3 +1,4 @@
+// Package handler provides HTTP handlers for analytics endpoints.
 package handler
 
 import (
@@ -47,7 +48,7 @@ func (h *AnalyticsHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 // HealthCheck handles GET /health
-func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, _ *http.Request) {
 	response := map[string]interface{}{
 		"status":  "healthy",
 		"service": "analytics-service",
@@ -108,11 +109,15 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, err := json.Marshal(payload)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		if _, writeErr := w.Write([]byte("Internal server error")); writeErr != nil {
+			log.Printf("Error writing error response: %v", writeErr)
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(response)
+	if _, err := w.Write(response); err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
 }

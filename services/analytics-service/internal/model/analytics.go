@@ -1,3 +1,4 @@
+// Package model defines data structures for analytics events and metrics.
 package model
 
 import (
