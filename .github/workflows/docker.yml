@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  ORDER_PORT: 8080
+  ANALYTICS_PORT: 8081
+
 jobs:
-  # Job 1: Build individual images to ensure Dockerfiles are correct
   docker-build:
     name: Docker Build and Validate
     runs-on: ubuntu-latest
@@ -27,11 +30,10 @@ jobs:
           context: ./services/${{ matrix.service }}
           file: ./services/${{ matrix.service }}/Dockerfile
           push: false
-          tags: ${{ matrix.service }}:latest
+          tags: ${{ matrix.service }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Job 2: Run the entire stack using Docker Compose and verify connectivity
   docker-compose:
     name: Docker Compose Validation
     runs-on: ubuntu-latest
@@ -40,44 +42,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate docker-compose.yml configuration
+      - name: Validate docker-compose.yml
         run: docker compose config
 
-      - name: Build and Start all services
+      - name: Cleanup before up
+        run: docker compose down -v || true
+
+      - name: Build and start all services
         run: docker compose up -d --build
 
-      - name: Wait and Verify Service Health
+      - name: Wait and verify service health
         run: |
-          echo "Starting health checks for all microservices..."
+          echo "Starting parallel health checks..."
 
-          # Function to check health with retry logic (up to 60 seconds)
           check_health() {
             local url=$1
             local name=$2
-            echo "Verifying $name at $url..."
             for i in {1..12}; do
-              # Perform curl request and check for HTTP 200 status
               if curl -s -f "$url" > /dev/null; then
-                echo "✅ $name is UP and responding!"
+                echo "✅ $name is UP!"
                 return 0
               fi
-              echo "⏳ $name not ready yet (attempt $i/12), retrying in 5s..."
+              echo "⏳ $name not ready (attempt $i/12), retrying in 5s..."
               sleep 5
             done
-            echo "❌ $name failed to start after 60 seconds!"
+            echo "❌ $name failed to start!"
             return 1
           }
 
-          # Verify Order Service (API)
-          check_health "http://localhost:8080/health" "Order Service" || exit 1
-
-          # Verify Analytics Service (API)
-          check_health "http://localhost:8081/health" "Analytics Service" || exit 1
+          # Run health checks in parallel
+          check_health "http://localhost:${ORDER_PORT}/health" "Order Service" &
+          check_health "http://localhost:${ANALYTICS_PORT}/health" "Analytics Service" &
+          wait
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs
+        run: docker compose logs --tail 50
 
       - name: Cleanup infrastructure
         if: always()
         run: docker compose down -v
+
