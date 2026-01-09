@@ -1,8 +1,6 @@
 # Event-Driven Order System
 
-A production-inspired **event-driven microservices architecture** built with **Go**, demonstrating modern backend engineering patterns including service decoupling, asynchronous communication, distributed systems design, and operational excellence.
-
-This project is designed for developers preparing for backend system design interviews and those interested in building scalable microservices architectures.
+A production-inspired **event-driven order management system** built with **Go**, focusing on scalable microservices architecture, asynchronous event processing, distributed system design, and production-ready operational practices.
 
 ## Table of Contents
 
@@ -802,7 +800,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **andev0x** - [GitHub](https://github.com/andev0x)
 
-Built as a backend-focused learning project to demonstrate modern Go microservices architecture, event-driven design patterns, and production-ready engineering practices suitable for system design interviews and real-world applications.
+> Backend-focused project showcasing Go microservices, event-driven architecture, and production-ready engineering practices.
 
 ### Key Learning Objectives
 
@@ -815,6 +813,10 @@ Built as a backend-focused learning project to demonstrate modern Go microservic
 ---
 
 **Last Updated**: January 2026
+
 **Project Status**: Active Development
+
 **Go Version**: 1.21+
+
 **License**: [MIT](LICENSE)
+
