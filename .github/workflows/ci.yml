@@ -9,6 +9,11 @@ on:
       - 'docs/**'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - '**/*.md'
+      - 'README.md'
+      - 'docs/**'
+
 
 env:
   GO_VERSION: '1.21'
