@@ -416,7 +416,7 @@ curl http://localhost:8081/analytics/summary
 
 ```bash
 # Clone the repository
-git clone https://github.com/anvndev/event-drive-order-system.git
+git clone https://github.com/andev0x/event-drive-order-system.git
 cd event-drive-order-system
 
 # Start dependencies only (MySQL, Redis, RabbitMQ)
@@ -468,7 +468,7 @@ This project follows Go best practices:
 ### Adding a New Service
 
 1. Create directory structure in `services/new-service/`
-2. Initialize Go module: `go mod init github.com/anvndev/new-service`
+2. Initialize Go module: `go mod init github.com/andev0x/new-service`
 3. Implement layers: handler → service → repository
 4. Add Dockerfile to service root
 5. Update docker-compose.yml with service definition
